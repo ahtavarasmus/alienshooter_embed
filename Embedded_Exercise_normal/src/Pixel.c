@@ -49,8 +49,11 @@ void setup(){
     for (row = 0; row < 8; ++row){
         for (color = 0; color < 3; ++color){
             for (bit = 0; bit < 6; ++bit){
+                /* set only bit3 to zero (CLK bit)*/
+                *ctrl &=~0x10;
                 // transfer 1-bit to register
                 *ctrl|=0x10;
+                /* set only bit3 back to one (CLK bit)*/
             }
         }
     }
