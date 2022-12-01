@@ -97,6 +97,9 @@ Brief description:
         - BTN2 shoots the lazer bullet
         - BTN3 resets the game
 
+        - Hit score can be seen by ship's yellow tiles
+        - Miss score can be seen from right side of the matrix in violet
+
 
 
 *****************************************************************************************/
@@ -129,7 +132,7 @@ void check_game_status()
     if (hit_score == 3){
         game_end = 1;
         game_won = 1;
-    } else if (miss_score > 9){
+    } else if (miss_score == 8){
         game_end = 1;
     }
 
@@ -144,10 +147,18 @@ void check_game_status()
 void draw_ship()
 {
     SetPixel(ship_x,ship_y,255,0,0);
-    SetPixel(ship_x,ship_y+1,255,0,0);
-    SetPixel(ship_x-1,ship_y,255,0,0);
-    SetPixel(ship_x+1,ship_y,255,0,0);
 
+    // if at least one point change right pixel to yellow
+    if (hit_score > 0) SetPixel(ship_x-1,ship_y,255,255,0);
+    else SetPixel(ship_x-1,ship_y,255,0,0);
+
+    // if at least two points change left pixel to yellow
+    if (hit_score > 1) SetPixel(ship_x+1,ship_y,255,255,0);
+    else SetPixel(ship_x+1,ship_y,255,0,0);
+
+    // if goal points change top to yellow, it's not showing really tho
+    if (hit_score > 2) SetPixel(ship_x,ship_y+1,255,255,0);
+    else SetPixel(ship_x,ship_y+1,255,0,0);
 }
 
 /* clear_ship - clears the ship from the dots array */
@@ -171,10 +182,30 @@ void draw_alien(){SetPixel(alien_x,0,0,255,0);}
 /* clear_alien - clears alien from dots array */
 void clear_alien(){SetPixel(alien_x,0,0,0,0);}
 
+/* draw_miss_score - draws rightside's miss score */
+void draw_miss_score()
+{
+    // draw current score to the right side column
+    int i,y = 7;
+    for (i = 0; i < miss_score; ++i){
+        // violet
+        SetPixel(7,y,238,130,238);
+        --y;
+    }
+}
+
+/* clear_miss_score - clears rightside's miss score */
+void clear_miss_score()
+{
+    int i;
+    for (i = 0; i < 7; ++i) SetPixel(7,i,0,0,0);
+}
+
 
 /* draw_board - draws the board */
 void draw_board()
 {
+    draw_miss_score();
     draw_ship();
     draw_alien();
     if (lazer_on)
@@ -184,6 +215,7 @@ void draw_board()
 /* clear_board - clears the whole board */
 int clear_board()
 {
+    clear_miss_score();
     clear_ship();
     clear_alien();
     clear_lazer();
@@ -266,7 +298,7 @@ void move_alien()
     // if alien going to right
     if (alien_dir == 1){
         // if on the right - change dir to left
-        if (alien_x == 7){
+        if (alien_x == 6){
             alien_dir = 0;
             --alien_x;
         } else {
@@ -297,7 +329,7 @@ void move_ship(uint8_t direction)
         --ship_x;
     } else {
         // if already at most right
-        if (ship_x+1 == 7)
+        if (ship_x+1 == 6)
             return;
         // clear old ship position
         ++ship_x;
@@ -312,9 +344,9 @@ void init_game()
     clear_board();
     // TickHandler changes this
     cur_channel = 0;
-    ship_x = 4;
-    ship_y = 7;
-    alien_x = 4;
+    ship_x = 3;
+    ship_y = 6;
+    alien_x = 3;
     alien_dir = 1;
     hit_score = 0;
     miss_score = 0;
@@ -466,7 +498,7 @@ void ButtonHandler(void *CallBackRef, u32 Bank, u32 Status){
         lazer_on = 1;
         // put lazer above ship
         lazer_x = ship_x;
-        lazer_y = 5;
+        lazer_y = 4;
         draw_board();
 
     } else if (Status == 0x08){
