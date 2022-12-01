@@ -9,6 +9,7 @@
 #define PIXEL_H_
 
 #include "platform.h"
+#include <stdint.h>
 #include "xil_printf.h"
 #include "sleep.h"
 #include "xgpiops.h"
