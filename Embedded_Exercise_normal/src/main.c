@@ -88,21 +88,36 @@ Student number:
 Tick boxes that you have coded
 
 Led-matrix driver		Game		    Assembler
-	[]					[]					[]
+	[x]					[x]					[]
 
-Brief description:
+Brief description: 
+        - Game is won if you hit alien 3 times and lost if you miss 10 times.
+        - BTN0 moves the ship right
+        - BTN1 moves the ship left
+        - BTN2 shoots the lazer bullet
+        - BTN3 resets the game
+
+
 
 *****************************************************************************************/
 
-// some global variables
+/* ------- Some global variables - all initialized at init_game() ------------ */
+
+// cur_channel is knows which channel should be shown currently
 uint8_t cur_channel;
-// ship pos
+// ship's pos
 uint8_t ship_x,ship_y;
-// pos and direction it's heading: 1 means right, 0 means left
+// alien's pos and direction it's heading: 1 means right, 0 means left
 uint8_t alien_x,alien_dir;
-// pos and lazer_on keeps track if lazer on the board
+// lazer bullet's pos and lazer_on keeps track if lazer on the board
 uint8_t lazer_x,lazer_y,lazer_on;
+// hit_score,miss_score keeps track of game points
+uint8_t hit_score,miss_score;
+// game_end tells TickHandler1 if it should show the end screen
+uint8_t game_end = 0;
+// game_won tells the end screen if you won or lost the game
 uint8_t game_won = 0;
+
 
 
 
@@ -110,10 +125,14 @@ uint8_t game_won = 0;
 /* This is called from move_lazer - function */
 void check_game_status()
 {
-    // game has been won
-    if (alien_x == lazer_x){
+    // if game has ended
+    if (hit_score == 3){
+        game_end = 1;
         game_won = 1;
+    } else if (miss_score > 9){
+        game_end = 1;
     }
+
 }
 
 
@@ -171,35 +190,50 @@ int clear_board()
     return 0;
 }
 
-/* show_winning_screen - this is called if TickHandler1 notices game_won==1*/
-void show_winning_screen()
+/* show_end - this is called if TickHandler1 notices game_end==1*/
+void show_end(uint8_t game_won)
 {
     clear_board();
-    // eyes
-    SetPixel(2, 3,255,0,0);
-    SetPixel(5, 3,255,0,0);
-    // mouth
-    SetPixel(1, 5,255,0,0);
-    SetPixel(2, 6,255,0,0);
-    SetPixel(3, 6,255,0,0);
-    SetPixel(4, 6,255,0,0);
-    SetPixel(5, 6,255,0,0);
-    SetPixel(6, 5,255,0,0);
+    if (game_won){
+        // eyes
+        SetPixel(2, 3,255,0,0);
+        SetPixel(5, 3,255,0,0);
+        // mouth
+        SetPixel(1, 5,255,0,0);
+        SetPixel(2, 6,255,0,0);
+        SetPixel(3, 6,255,0,0);
+        SetPixel(4, 6,255,0,0);
+        SetPixel(5, 6,255,0,0);
+        SetPixel(6, 5,255,0,0);
+    } else {
+        // eyes
+        SetPixel(2, 3,255,0,0);
+        SetPixel(5, 3,255,0,0);
+        // mouth
+        SetPixel(1, 7,255,0,0);
+        SetPixel(2, 6,255,0,0);
+        SetPixel(3, 6,255,0,0);
+        SetPixel(4, 6,255,0,0);
+        SetPixel(5, 6,255,0,0);
+        SetPixel(6, 7,255,0,0);
+    }
 
 }
-/* clear_winning_screen - this is called if BTN3 is pressed */
-void clear_winning_screen()
+/* clear_end_screen - this is called if BTN3 is pressed */
+void clear_end_screen()
 {
     // eyes
     SetPixel(2, 3,0,0,0);
     SetPixel(5, 3,0,0,0);
-    // mouth
+    // mouth - clears both smiley and not smiley
+    SetPixel(1, 7,0,0,0);
     SetPixel(1, 5,0,0,0);
     SetPixel(2, 6,0,0,0);
     SetPixel(3, 6,0,0,0);
     SetPixel(4, 6,0,0,0);
     SetPixel(5, 6,0,0,0);
     SetPixel(6, 5,0,0,0);
+    SetPixel(6, 7,0,0,0);
 
 }
 /* ------------------- CHANGING PIXELS -------------------------- */
@@ -214,6 +248,11 @@ void move_lazer()
     --lazer_y;
     if (lazer_y == 0){
         lazer_on = 0;
+        // hitting increases the hit_score and missing the miss_score
+        if (lazer_x == alien_x)
+            ++hit_score;
+        else
+            ++miss_score;
         check_game_status();
     }
     draw_board();
@@ -277,8 +316,11 @@ void init_game()
     ship_y = 7;
     alien_x = 4;
     alien_dir = 1;
+    hit_score = 0;
+    miss_score = 0;
     // lazer is not on screen
     lazer_on = 0;
+    game_end = 0;
     game_won = 0;
     draw_board();
 }
@@ -370,8 +412,10 @@ void TickHandler1(void *CallBackRef){
 
 	//****Write code here ****
 
-    if (game_won){
-        show_winning_screen();
+    if (game_end){
+        // clearing it just in case
+        clear_end_screen();
+        show_end(game_won);
     }
 
 
@@ -414,6 +458,9 @@ void ButtonHandler(void *CallBackRef, u32 Bank, u32 Status){
 
     } else if (Status == 0x04){
         // BTN2
+        // if lazer on the screen we have to wait for it to pass
+        if (lazer_on)
+            return;
         clear_board();
         // shoot lazer
         lazer_on = 1;
@@ -425,7 +472,7 @@ void ButtonHandler(void *CallBackRef, u32 Bank, u32 Status){
     } else if (Status == 0x08){
         // BTN3
         // start new game
-        clear_winning_screen();
+        clear_end_screen();
         init_game();
 
     } else if (Status == 0x10){
